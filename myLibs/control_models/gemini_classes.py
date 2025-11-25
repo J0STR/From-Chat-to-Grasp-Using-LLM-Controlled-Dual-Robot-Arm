@@ -19,7 +19,7 @@ class GeminiChatDual:
                                                        hand_over_object,
                                                        stop_loop,])
         self.config = types.GenerateContentConfig(tools=[self.tools],temperature=0.0)
-        self.model = "gemini-2.5-flash"
+        self.model = "gemini-robotics-er-1.5-preview"
         
         self.chat = None
 
