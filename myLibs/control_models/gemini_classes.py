@@ -41,12 +41,3 @@ class GeminiChatDual:
                 pass
                 
         return response
-
-# TODO: this is the correct way to 
-# give the model the response: https://ai.google.dev/gemini-api/docs/function-calling?example=meeting#step_3_execute_set_light_values_function_code
-# look step 4
-# function_response_part = types.Part.from_function_response(
-#     name=function_call.name,
-#     response={f"Result": object_pose},
-# )
-# content.append(function_response_part)
