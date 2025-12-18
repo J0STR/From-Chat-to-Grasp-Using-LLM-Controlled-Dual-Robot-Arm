@@ -9,7 +9,7 @@ from myLibs.control_models.gemini_function_declarations_json import *
 
 API_KEY = '' ### Enter API-Key Here
     
-class GeminiChatDual:
+class GeminiRobotics:
     def __init__(self):
         self.client = genai.Client(api_key=API_KEY)
         self.tools = types.Tool(function_declarations=[get_object_with_gemini,
@@ -18,7 +18,9 @@ class GeminiChatDual:
                                                        close_gripper_dual,
                                                        hand_over_object,
                                                        stop_loop,])
-        self.config = types.GenerateContentConfig(tools=[self.tools],temperature=0.0)
+        self.config = types.GenerateContentConfig(tools=[self.tools],
+                                                  temperature=0.0,
+                                                  thinking_config=types.ThinkingConfig(thinking_budget=24000))
         self.model = "gemini-robotics-er-1.5-preview"
         
         self.chat = None

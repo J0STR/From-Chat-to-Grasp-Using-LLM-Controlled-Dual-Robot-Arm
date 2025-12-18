@@ -10,8 +10,6 @@ from google.genai import types
 from typing import List
 import io
 
-from myLibs.yolo.yolo_functions import crop_image, uncrop_rect, uncrop_polygon
-from myLibs.yolo.yolo_classes import YoloPromptSegmenter
 from myLibs.control_models.gemini_classes import API_KEY
 
 @dataclass
@@ -98,19 +96,6 @@ def parse_json(json_output: str):
 
     return output
 
-def get_object_rect(segmenter: YoloPromptSegmenter, frame, object_name):
-    name_list = [object_name]
-    segmenter.change_object(name_list)    
-    rect = None
-    cropped_img, roi_x, roi_y = crop_image(frame)
-    results = segmenter.segment(cropped_img[:,:,:3])
-    rect, xy_polygon = segmenter.get_rect_from_result()
-    if rect is None:
-        return None , None
-    rect = uncrop_rect(rect,roi_x,roi_y)
-    polylines = xy_polygon[0]
-    polylines = uncrop_polygon(polylines, roi_x, roi_y)
-    return rect, polylines
 
 def set_robot_state(robot_id, position, task):
     return robot_id, position, task

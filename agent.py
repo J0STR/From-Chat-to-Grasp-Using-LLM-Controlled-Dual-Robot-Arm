@@ -1,7 +1,7 @@
 import multiprocessing
 from myLibs.video_sources.depth_cam import depthcam_and_object_extraction_loop
 from myLibs.low_lvl_control.dual_robot_arm_jointspace import control_loop_jointspace
-from myLibs.control_models.gemini_control_loops import gemini_loop_new_gui
+from myLibs.control_models.gemini_control_loops import gemini_loop
 from myLibs.pygame.GUI_modern import GUI_modern_loop
 from myLibs.audio_input.recorder import AudioRecorder
 
@@ -48,7 +48,7 @@ if __name__ == "__main__":
                                                               request_rect_reset,
                                                               shared_data))
     p1.start()
-    p2 = multiprocessing.Process(target=gemini_loop_new_gui, args=(stop_runtime,
+    p2 = multiprocessing.Process(target=gemini_loop, args=(stop_runtime,
                                                                 request_depth_pose,
                                                                 request_rect_reset, 
                                                                 request_robot_reset,

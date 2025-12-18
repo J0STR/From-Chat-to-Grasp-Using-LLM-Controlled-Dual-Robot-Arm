@@ -1,4 +1,3 @@
-import sympy as sp
 import numpy as np
 from myLibs.translation_rotation.matrices import *
 

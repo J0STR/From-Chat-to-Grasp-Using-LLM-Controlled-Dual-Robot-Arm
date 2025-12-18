@@ -30,6 +30,11 @@ def check_and_run_function_calls_no_yolo(task: bool,
                         print(function_call.name)
                         print(function_call.args)
 
+                        hist = shared_data.output_hist
+                        hist += '<font color=#5AACE3>'+function_call.name+'</font><br>'
+                        hist += '<font color=#EB8258>'+json.dumps(function_call.args)+'</font><br><br>'
+                        shared_data.output_hist = hist
+
                         history_saver.append(function_call.name)
                         history_saver.extend(function_call.args)
 
@@ -61,6 +66,8 @@ def check_and_run_function_calls_no_yolo(task: bool,
                                                 input_text,
                                                 robot_id,
                                                 content,
+                                                current_state_robo_1,
+                                                current_state_robo_2,  
                                                 goal_state_robo_1,
                                                 goal_state_robo_2,
                                                 request_positioning_gripper_1,

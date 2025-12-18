@@ -4,10 +4,11 @@ import time
 import numpy as np
 from multiprocessing.synchronize import Event as EventClass
 
-from .video_functions import draw_item_infos , adapt_angle_to_yaw
+
+from .video_functions import draw_item_infos, calculate_gripping_pos, calculate_gripping_mm, adapt_angle_to_yaw
 from myLibs.control_models.gemini_helper_functions import SegmentationItem
 
-def azure_loop_gui_no_yolo(stop_runtime: EventClass,
+def depthcam_and_object_extraction_loop(stop_runtime: EventClass,
                    request_depth_pose: EventClass,
                    request_rect_reset: EventClass,
                    shared_data):
@@ -36,9 +37,15 @@ def azure_loop_gui_no_yolo(stop_runtime: EventClass,
             (center_x, center_y), (width, height), angle = rect
             point = np.array([center_x,center_y],dtype=int)
             # calculate gripper angle
-            yaw = adapt_angle_to_yaw(width, height, angle)         
+            yaw= adapt_angle_to_yaw(width, height, angle) # is in degree
+            item.grasping_pos = calculate_gripping_pos(center_x,center_y,width,height,yaw)
+            print(item.grasping_pos)       
             #calculate 3d pose
             succes_transform, pose3d = device.point_averaged_to_3d(point,pixel_coordinates)
+            # calculate left and right gripper pos
+            succes_transform_1, left_gripper = device.point_to_3d(item.grasping_pos[0].astype(int))
+            succes_transform_2, right_gripper = device.point_to_3d(item.grasping_pos[1].astype(int))
+            item.grasping_mm = calculate_gripping_mm(left_gripper, right_gripper)
 
             if succes_transform:    
                 pos_object_arm_coord = transform_cam_to_robo_coord(pose3d,length_gripper)
@@ -46,9 +53,9 @@ def azure_loop_gui_no_yolo(stop_runtime: EventClass,
                 shared_data.items = item
                 request_depth_pose.clear()
 
-        if request_rect_reset.is_set():
-            item = None
-            request_rect_reset.clear()
+        # if request_rect_reset.is_set():
+        #     item = None
+        #     request_rect_reset.clear()
 
         if item is not None:
             draw_item_infos(frame,item)

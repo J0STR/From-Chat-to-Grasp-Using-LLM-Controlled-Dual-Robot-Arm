@@ -1,21 +1,23 @@
 import numpy as np
-from ultralytics import YOLOE
 from multiprocessing.synchronize import Event as EventClass
 from multiprocessing.sharedctypes import Synchronized, SynchronizedArray
 import multiprocessing
 import os
 
-from.gemini_classes import GeminiChatDual
+from.gemini_classes import GeminiRobotics
 from .gemini_helper_functions import wait_processes_to_init_dual_setup
 from .gemini_function_calling_handler import check_and_run_function_calls_no_yolo
 from myLibs.ufactory.dual_arm_functions import transform_robo_to_coord_sys
 from myLibs.video_sources.video_functions import convert_cv_2_pil_resize
 
+import time
+
        
-def dual_arm_gemini_loop_no_yolo(stop_runtime: EventClass,
+def gemini_loop(stop_runtime: EventClass,
                          request_depth_pose: EventClass,
                          request_rect_reset: EventClass,
                          request_robot_reset: EventClass,
+                         request_record: EventClass,
                          input_text: multiprocessing.Queue,
                          shared_data,
                          status_robo_1:Synchronized,
@@ -33,35 +35,50 @@ def dual_arm_gemini_loop_no_yolo(stop_runtime: EventClass,
     prompt_path = os.path.join(script_dir, "prompts/dual_task.txt")
     with open(prompt_path, "r", encoding="utf-8") as file:
         prompt = file.read()   
+    audio_file = ("/home/jonas/coding/xArm/myLibs/audio_input/recording.wav")
     wait_processes_to_init_dual_setup(shared_data,stop_runtime, status_robo_1, status_robo_2)
     all_time_history = []
 
+    #VoiceRecorder = AudioRecorder()
+
     task = None
     while not stop_runtime.is_set():
-        GeminiClient = GeminiChatDual()
+        GeminiClient = GeminiRobotics()
         GeminiClient.start_chat()
         response = GeminiClient.message(prompt)
 
         hist = shared_data.output_hist
-        hist.append(response.text)
+        hist += response.text + '<br><br>'
         shared_data.output_hist = hist
+        all_time_history.append(response.text)
         # get command description
         content = []
         wait_task = True
         while wait_task and not stop_runtime.is_set():
+            # Text input
             if not input_text.empty():
                 eingabe = input_text.get()
                 content.append(eingabe)
-                hist = shared_data.output_hist
-                hist.append(eingabe)
+                hist = ''
+                hist += '<b>'+eingabe +'</b>'+ '<br><br><br>'
                 shared_data.output_hist = hist
                 wait_task = False
                 task = True
-
                 print("Entered task")
                 print("\n")
-
-        all_time_history.append(response.text)
+            # Voice command
+            if request_record.is_set():
+                while request_record.is_set():
+                    pass
+                time.sleep(0.5)
+                voice_task = GeminiClient.client.files.upload(file=audio_file)
+                content.append('This audio descibes your task. Describe what task it is')
+                content.append(voice_task)
+                shared_data.output_hist = ''
+                wait_task = False
+                task = True
+                print('Audio task submitted')
+                print("\n")
 
         # start control loop
         while not stop_runtime.is_set() and task:
@@ -85,13 +102,14 @@ def dual_arm_gemini_loop_no_yolo(stop_runtime: EventClass,
                 eingabe = input_text.get()
                 content.append(eingabe)
                 hist = shared_data.output_hist
-                hist.append(eingabe)
+                hist += '<b>'+eingabe +'</b>'+ '<br><br><br>'
                 shared_data.output_hist = hist
 
             response = GeminiClient.message(content)
             content = []
             hist = shared_data.output_hist
-            hist.append(response.text)
+            if response.text is not None:
+                hist += response.text + '<br><br><br>'
             shared_data.output_hist = hist
 
             all_time_history.append(response.text)

@@ -7,7 +7,6 @@ from .gemini_helper_functions import *
 from myLibs.video_sources.video_functions import convert_cv_2_pil
 from myLibs.history_saver.function import write_list_to_file
 
-
 def handle_get_object_with_gemini(stop_runtime: EventClass,
                       input_text: multiprocessing.Queue,
                         function_call,
@@ -83,6 +82,8 @@ def handle_close_gripper(stop_runtime: EventClass,
                         input_text: multiprocessing.Queue,
                         robot_id: int,
                         content: list,
+                        current_state_robo_1: SynchronizedArray,
+                        current_state_robo_2: SynchronizedArray,  
                         goal_state_robo_1: SynchronizedArray,
                         goal_state_robo_2: SynchronizedArray,
                         request_positioning_gripper_1: Synchronized,
@@ -96,7 +97,10 @@ def handle_close_gripper(stop_runtime: EventClass,
     interrupted = wait_moving(stop_runtime, request_positioning_gripper_1, request_positioning_gripper_2, input_text)
     if not interrupted:
         content.append(f"Gripper of robot {robot_id} closed.")
-        content.append(f"Check if a succesfull grasp has been made.")
+        if (robot_id == 1 and current_state_robo_1.get_obj()[-1]> 10) or (robot_id == 2 and current_state_robo_2.get_obj()[-1]> 10) :
+            content.append(f"The grasp was succesfull.")
+        else:
+            content.append(f"The grasp failed.")
     else:
         content.append(f"The function call was interrupted by a user intervention with the following prompt:")
 
@@ -110,11 +114,11 @@ def handle_end_task(task,
     task = False
     request_robot_reset.set()
     request_rect_reset.set()
-    goal_state_robo_1.get_obj()[:] =np.array([200,0, 300,-179, 0,0, 840])
-    goal_state_robo_2.get_obj()[:] =np.array([200,0, 300,-179, 0,0, 840])
+    goal_state_robo_1.get_obj()[:] =np.array([200,0, 300,-180, 0,0, 840])
+    goal_state_robo_2.get_obj()[:] =np.array([200,0, 300,-180, 0,0, 840])
     print('--------------new task---------------------------')
     hist = shared_data.output_hist
-    hist.append('--------------new task---------------------------')
+    hist += '<b>---NEW TASK---</b> <br><br><br><br>'
     shared_data.output_hist = hist
     write_list_to_file(history_saver)
     history_saver = []
@@ -139,7 +143,7 @@ def handle_hand_over(stop_runtime: EventClass,
     transfer_offset = 40
     transfer_x_pos  = 565
 
-    reset_pose_first = np.array([200, 0, 400, -180, 0, 0])
+    reset_pose_first = np.array([350, 0, 500, -180, 0, 0])
 
     horizontal_pose_lower  = np.array([500, 0, 500, -180,-90,0])
     horizontal_pose_higher = np.array([500, 0, 500 + transfer_offset, -179,-89.5,0])
@@ -151,7 +155,7 @@ def handle_hand_over(stop_runtime: EventClass,
 
     if robot_master == 1 and robot_slave == 2 and not interrupted:
         goal_state_robo_1.get_obj()[:]=np.hstack((reset_pose_first,0))
-        goal_state_robo_2.get_obj()[:]=np.hstack((reset_pose_first,0))
+        goal_state_robo_2.get_obj()[:]=np.hstack((reset_pose_first,840))
         request_positioning_robot_1.value = True
         request_positioning_robot_2.value = True
         interrupted = wait_moving(stop_runtime, request_positioning_robot_1, request_positioning_robot_2,input_text)
@@ -179,6 +183,11 @@ def handle_hand_over(stop_runtime: EventClass,
         request_positioning_gripper_2.value = True
         interrupted = wait_moving(stop_runtime, request_positioning_robot_1, request_positioning_robot_2,input_text)
     elif robot_master == 2 and robot_slave == 1 and not interrupted:
+        goal_state_robo_1.get_obj()[:]=np.hstack((reset_pose_first,840))
+        goal_state_robo_2.get_obj()[:]=np.hstack((reset_pose_first,0))
+        request_positioning_robot_1.value = True
+        request_positioning_robot_2.value = True
+        interrupted = wait_moving(stop_runtime, request_positioning_robot_1, request_positioning_robot_2,input_text)
         # step 1 robot 1
         hand_over_pos = horizontal_pose_higher
         goal_state_robo_1.get_obj()[:]=np.hstack((hand_over_pos,840))
@@ -295,6 +304,8 @@ def handle_hand_over(stop_runtime: EventClass,
         reset_pos = init_pose
         goal_state_robo_1.get_obj()[:]=np.hstack((reset_pos,0))
         request_positioning_robot_1.value = True  
+        goal_state_robo_2.get_obj()[:]=np.hstack((reset_pos,0))
+        request_positioning_robot_2.value = True 
     elif robot_master == 2 and not interrupted:
         # move back robo 2
         reset_pos = move_apart_pose
@@ -312,6 +323,8 @@ def handle_hand_over(stop_runtime: EventClass,
         interrupted = wait_moving(stop_runtime, request_positioning_robot_1, request_positioning_robot_2,input_text)
         # move start pos robo 2
         reset_pos = init_pose
+        goal_state_robo_1.get_obj()[:]=np.hstack((reset_pos,0))
+        request_positioning_robot_1.value = True  
         goal_state_robo_2.get_obj()[:]=np.hstack((reset_pos,0))
         request_positioning_robot_2.value = True 
 

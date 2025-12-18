@@ -1,0 +1,10 @@
+pydantic
+opencv-python
+pillow
+xarm-python-sdk
+google-genai
+pykinect-azure
+pygame_gui
+sounddevice
+scipy
+pybullet
